@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Timemark Photo & Video Generator</title>
+  <title>Timemark Watermark Generator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
     .form-section { flex: 1; min-width: 320px; background: #1f2937; padding: 20px; border-radius: 8px; border: 1px solid #374151; }
     .form-group { margin-bottom: 12px; }
     label { display: block; margin-bottom: 5px; font-size: 13px; color: #9ca3af; font-weight: 500; }
-    input[type="text"], input[type="file"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #4b5563; background: #111827; color: #fff; font-size: 14px; }
+    input[type="text"], input[type="file"], select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #4b5563; background: #111827; color: #fff; font-size: 14px; }
     .input-group { display: flex; gap: 8px; }
     .input-group input { flex: 1; }
     .btn-sub { padding: 0 12px; background: #374151; border: 1px solid #4b5563; color: #f5a623; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px; }
@@ -37,34 +37,45 @@
   <div class="container">
     <div class="form-section">
       <div class="form-group">
-        <label>1. Chọn tệp (Ảnh hoặc Video MP4/WebM):</label>
+        <label>1. Chọn Mẫu Con Dấu (Template):</label>
+        <select id="templateSelect" onchange="applyWatermark()">
+          <option value="template1">Mẫu 1: Badge Giờ Cam/Trắng (Cơ bản)</option>
+          <option value="template2" selected>Mẫu 2: Giờ Khổ Lớn + Vạch Đứng (Tối giản)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>2. Chọn tệp (Ảnh hoặc Video):</label>
         <input type="file" id="mediaInput" accept="image/*,video/*">
       </div>
       <div class="form-group">
-        <label>2. Tên đơn vị / Nhãn:</label>
-        <input type="text" id="labelInput" value="Điểm danh">
+        <label>3. Tên đơn vị / Nhãn:</label>
+        <input type="text" id="labelInput" value="Cửa Hàng Tạp Hóa PhiLip">
       </div>
       <div class="form-group">
-        <label>3. Giờ (HH:MM):</label>
+        <label>4. Giờ (HH:MM):</label>
         <input type="text" id="timeInput">
       </div>
       <div class="form-group">
-        <label>4. Ngày tháng:</label>
+        <label>5. Ngày tháng:</label>
         <input type="text" id="dateInput">
       </div>
       <div class="form-group">
-        <label>5. Tọa độ GPS:</label>
+        <label>6. Thứ trong tuần:</label>
+        <input type="text" id="dayNameInput">
+      </div>
+      <div class="form-group">
+        <label>7. Tọa độ GPS (Nếu có):</label>
         <div class="input-group">
-          <input type="text" id="gpsInput" value="11.857279°N, 109.220627°E">
+          <input type="text" id="gpsInput" value="">
           <button class="btn-sub" onclick="getCurrentGPS()">📍 GPS thực</button>
         </div>
       </div>
       <div class="form-group">
-        <label>6. Địa chỉ (Để trống nếu chỉ dùng tọa độ):</label>
-        <input type="text" id="addressInput" value="">
+        <label>8. Địa chỉ:</label>
+        <input type="text" id="addressInput" value="Thôn Đầm Môn, X.Vạn Thạnh, H.Vạn Ninh, Khánh Hòa">
       </div>
       <div class="form-group">
-        <label>7. Mã Verify:</label>
+        <label>9. Mã Verify:</label>
         <div class="input-group">
           <input type="text" id="verifyInput" readonly>
           <button class="btn-sub" onclick="regenerateCode()">🎲 Mã mới</button>
@@ -105,7 +116,8 @@
       const month = now.getMonth() + 1;
       const year = now.getFullYear();
 
-      document.getElementById('dateInput').value = `${dayName}, ${day} Tháng ${month}, ${year}`;
+      document.getElementById('dateInput').value = `${day} Tháng ${month},${year}`;
+      document.getElementById('dayNameInput').value = dayName;
     }
 
     function generateRandomVerifyCode() {
@@ -125,7 +137,7 @@
           document.getElementById('gpsInput').value = `${lat}°N, ${lng}°E`;
           applyWatermark();
         }, () => {
-          alert("Không thể lấy vị trí GPS hiện tại từ trình duyệt!");
+          alert("Không thể lấy vị trí GPS hiện tại!");
         });
       }
     }
@@ -206,21 +218,66 @@
       }
 
       const scale = canvas.width / 1000; 
+      const template = document.getElementById('templateSelect').value;
+
+      if (template === 'template1') {
+        drawTemplate1(scale);
+      } else {
+        drawTemplate2(scale);
+      }
+
+      // VẼ LOGO TIMEMARK (GÓC DƯỚI PHẢI)
+      const rightX = canvas.width - (160 * scale);
+      const logoY = canvas.height - (55 * scale);
+
+      ctx.save();
+      ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+      ctx.shadowBlur = 4 * scale;
+
+      ctx.font = `bold ${22 * scale}px 'Roboto', sans-serif`;
+      ctx.fillStyle = "#f5a623";
+      ctx.fillText("Time", rightX, logoY);
+
+      const timeWordWidth = ctx.measureText("Time").width;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText("mark", rightX + timeWordWidth, logoY);
+
+      ctx.font = `400 ${13 * scale}px 'Roboto', sans-serif`;
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillText("100% Chân thực", rightX, logoY + (18 * scale));
+      ctx.restore();
+
+      // MÃ VERIFY DỌC (CHỈ IN TRÊN ẢNH)
+      if (!isVideo) {
+        const verifyText = document.getElementById('verifyInput').value;
+        ctx.save();
+        const centerY = canvas.height / 2;
+        ctx.translate(canvas.width - (12 * scale), centerY);
+        ctx.rotate(-Math.PI / 2);
+        ctx.font = `400 ${12 * scale}px 'Roboto', sans-serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.textAlign = "center";
+        ctx.fillText("🛡 " + verifyText, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    // ================= MẪU 1: BADGE GIỜ TRẮNG/CAM =================
+    function drawTemplate1(scale) {
       const labelText = document.getElementById('labelInput').value;
       const timeText = document.getElementById('timeInput').value;
       const dateText = document.getElementById('dateInput').value;
-      const gpsText = document.getElementById('gpsInput').value;
+      const dayNameText = document.getElementById('dayNameInput').value;
+      const fullDateStr = `${dayNameText}, ${dateText}`;
       const addressText = document.getElementById('addressInput').value;
-      const verifyText = document.getElementById('verifyInput').value;
+      const gpsText = document.getElementById('gpsInput').value;
 
       ctx.save();
-
       const paddingLeft = 35 * scale;
       const paddingBottom = 45 * scale;
       const badgeHeight = 48 * scale;
       
-      // Tính chiều cao tổng tùy theo có nhập địa chỉ hay không
-      let textLines = 1; // Luôn có dòng Ngày
+      let textLines = 1;
       if (gpsText) textLines++;
       if (addressText) textLines++;
       
@@ -228,7 +285,6 @@
       const totalWatermarkHeight = badgeHeight + addressBlockHeight;
       const startY = canvas.height - paddingBottom - totalWatermarkHeight;
 
-      // 1. BADGE GIỜ
       ctx.font = `bold ${19 * scale}px 'Roboto', sans-serif`;
       const labelWidth = ctx.measureText(labelText).width + (28 * scale);
       ctx.font = `bold ${32 * scale}px 'Roboto Condensed', sans-serif`;
@@ -251,74 +307,87 @@
       ctx.font = `bold ${32 * scale}px 'Roboto Condensed', sans-serif`;
       ctx.fillText(timeText, paddingLeft + labelWidth + (10 * scale), startY + (34 * scale));
 
-      // 2. NGÀY, TỌA ĐỘ & ĐỊA CHỈ
       const infoStartY = startY + badgeHeight + (20 * scale);
       let currentY = infoStartY + (18 * scale);
 
       ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
       ctx.shadowBlur = 4 * scale;
-      ctx.shadowOffsetX = 1 * scale;
-      ctx.shadowOffsetY = 1 * scale;
 
-      // Dải sọc màu vàng
       const stripeHeight = (textLines * 26) * scale;
       ctx.fillStyle = "#f5a623";
       ctx.fillRect(paddingLeft, infoStartY, 3.5 * scale, stripeHeight);
 
-      // In Ngày tháng
       ctx.fillStyle = "#ffffff";
       ctx.font = `500 ${22 * scale}px 'Roboto', sans-serif`;
-      ctx.fillText(dateText, paddingLeft + (15 * scale), currentY);
+      ctx.fillText(fullDateStr, paddingLeft + (15 * scale), currentY);
 
       
-      // In Địa chỉ (nếu có)
+
       if (addressText) {
         currentY += 28 * scale;
         ctx.font = `400 ${20 * scale}px 'Roboto Condensed', sans-serif`;
         wrapText(ctx, addressText, paddingLeft + (15 * scale), currentY, 650 * scale, 26 * scale);
       }
-      // In Tọa độ GPS (nếu có)
       if (gpsText) {
         currentY += 28 * scale;
         ctx.font = `400 ${20 * scale}px 'Roboto Condensed', sans-serif`;
         ctx.fillText(gpsText, paddingLeft + (15 * scale), currentY);
       }
 
+      ctx.restore();
+    }
 
-      // Dòng cam kết Timemark
-      currentY += 32 * scale;
-      ctx.font = `400 ${15 * scale}px 'Roboto', sans-serif`;
-      ctx.fillStyle = "#e2e8f0";
-      ctx.fillText("🛡 Cam kết ngày giờ chân thực bởi Timemark", paddingLeft, currentY);
+    // ================= MẪU 2: GIỜ KHỔ LỚN + VẠCH ĐỨNG =================
+    function drawTemplate2(scale) {
+      const labelText = document.getElementById('labelInput').value;
+      const timeText = document.getElementById('timeInput').value;
+      const dateText = document.getElementById('dateInput').value;
+      const dayNameText = document.getElementById('dayNameInput').value;
+      const gpsText = document.getElementById('gpsInput').value;
+      const addressText = document.getElementById('addressInput').value;
 
-      // 3. LOGO TIMEMARK (DƯỚI PHẢI)
-      const rightX = canvas.width - (160 * scale);
-      const logoY = canvas.height - (55 * scale);
+      ctx.save();
+      ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+      ctx.shadowBlur = 5 * scale;
+      ctx.shadowOffsetX = 1 * scale;
+      ctx.shadowOffsetY = 1 * scale;
 
-      ctx.font = `bold ${22 * scale}px 'Roboto', sans-serif`;
-      ctx.fillStyle = "#f5a623";
-      ctx.fillText("Time", rightX, logoY);
+      const paddingLeft = 35 * scale;
+      const paddingBottom = 50 * scale;
 
-      const timeWordWidth = ctx.measureText("Time").width;
+      // Tính tổng chiều cao của cụm tem Mẫu 2 để đẩy vị trí Y từ dưới lên
+      const timeFontSize = 75 * scale;
+      const addressFontSize = 23 * scale;
+      
+      let fullLocationStr = labelText ? `${labelText}, ${addressText}` : addressText;
+      if (gpsText) fullLocationStr += ` (${gpsText})`;
+
+      const startY = canvas.height - paddingBottom - (130 * scale);
+
+      // 1. In Giờ khổ lớn (Màu Trắng)
+      ctx.font = `700 ${timeFontSize}px 'Roboto Condensed', sans-serif`;
       ctx.fillStyle = "#ffffff";
-      ctx.fillText("mark", rightX + timeWordWidth, logoY);
+      ctx.fillText(timeText, paddingLeft, startY + (60 * scale));
 
-      ctx.font = `400 ${13 * scale}px 'Roboto', sans-serif`;
-      ctx.fillStyle = "#cbd5e1";
-      ctx.fillText("100% Chân thực", rightX, logoY + (18 * scale));
+      const timeWidth = ctx.measureText(timeText).width;
 
-      // 4. MÃ VERIFY DỌC (CHỈ HIỂN THỊ TRÊN ẢNH, VIDEO BỎ QUA)
-      if (!isVideo) {
-        ctx.save();
-        const centerY = canvas.height / 2;
-        ctx.translate(canvas.width - (12 * scale), centerY);
-        ctx.rotate(-Math.PI / 2);
-        ctx.font = `400 ${12 * scale}px 'Roboto', sans-serif`;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-        ctx.textAlign = "center";
-        ctx.fillText("🛡 " + verifyText, 0, 0);
-        ctx.restore();
-      }
+      // 2. Vạch đứng ngăn cách màu vàng cam
+      const stripeX = paddingLeft + timeWidth + (15 * scale);
+      ctx.fillStyle = "#f5a623";
+      ctx.fillRect(stripeX, startY + (10 * scale), 4 * scale, 55 * scale);
+
+      // 3. Ngày tháng & Thứ
+      const dateX = stripeX + (15 * scale);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = `500 ${23 * scale}px 'Roboto', sans-serif`;
+      ctx.fillText(dateText, dateX, startY + (30 * scale));
+
+      ctx.font = `500 ${21 * scale}px 'Roboto', sans-serif`;
+      ctx.fillText(dayNameText, dateX, startY + (58 * scale));
+
+      // 4. Địa chỉ / Tên cửa hàng
+      ctx.font = `400 ${addressFontSize}px 'Roboto Condensed', sans-serif`;
+      wrapText(ctx, fullLocationStr, paddingLeft, startY + (100 * scale), 700 * scale, 30 * scale);
 
       ctx.restore();
     }
