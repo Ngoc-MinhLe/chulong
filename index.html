@@ -270,6 +270,13 @@
       ctx.font = `500 ${22 * scale}px 'Roboto', sans-serif`;
       ctx.fillText(dateText, paddingLeft + (15 * scale), currentY);
 
+      
+      // In Địa chỉ (nếu có)
+      if (addressText) {
+        currentY += 28 * scale;
+        ctx.font = `400 ${20 * scale}px 'Roboto Condensed', sans-serif`;
+        wrapText(ctx, addressText, paddingLeft + (15 * scale), currentY, 650 * scale, 26 * scale);
+      }
       // In Tọa độ GPS (nếu có)
       if (gpsText) {
         currentY += 28 * scale;
@@ -277,12 +284,6 @@
         ctx.fillText(gpsText, paddingLeft + (15 * scale), currentY);
       }
 
-      // In Địa chỉ (nếu có)
-      if (addressText) {
-        currentY += 28 * scale;
-        ctx.font = `400 ${20 * scale}px 'Roboto Condensed', sans-serif`;
-        wrapText(ctx, addressText, paddingLeft + (15 * scale), currentY, 650 * scale, 26 * scale);
-      }
 
       // Dòng cam kết Timemark
       currentY += 32 * scale;
