@@ -17,10 +17,10 @@
     .form-group { margin-bottom: 12px; }
     label { display: block; margin-bottom: 5px; font-size: 13px; color: #9ca3af; font-weight: 500; }
     input[type="text"], input[type="file"] { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #4b5563; background: #111827; color: #fff; font-size: 14px; }
-    .verify-box { display: flex; gap: 8px; }
-    .verify-box input { flex: 1; }
-    .btn-rand { padding: 0 12px; background: #374151; border: 1px solid #4b5563; color: #f5a623; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px; }
-    .btn-rand:hover { background: #4b5563; }
+    .input-group { display: flex; gap: 8px; }
+    .input-group input { flex: 1; }
+    .btn-sub { padding: 0 12px; background: #374151; border: 1px solid #4b5563; color: #f5a623; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px; }
+    .btn-sub:hover { background: #4b5563; }
     .btn { display: inline-block; width: 100%; padding: 12px; background: #f5a623; border: none; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer; margin-top: 10px; text-align: center; font-size: 15px; }
     .btn:hover { background: #e09216; }
     .btn-download { background: #10b981; color: #fff; }
@@ -42,7 +42,7 @@
       </div>
       <div class="form-group">
         <label>2. Tên đơn vị / Nhãn:</label>
-        <input type="text" id="labelInput" value="Le Ngoc Minh Multimedia">
+        <input type="text" id="labelInput" value="Điểm danh">
       </div>
       <div class="form-group">
         <label>3. Giờ (HH:MM):</label>
@@ -53,14 +53,21 @@
         <input type="text" id="dateInput">
       </div>
       <div class="form-group">
-        <label>5. Địa chỉ:</label>
-        <input type="text" id="addressInput" value="13 Ngõ 149 Phủ Thượng Đoạn, Đông Hải, Hải Phòng">
+        <label>5. Tọa độ GPS:</label>
+        <div class="input-group">
+          <input type="text" id="gpsInput" value="11.857279°N, 109.220627°E">
+          <button class="btn-sub" onclick="getCurrentGPS()">📍 GPS thực</button>
+        </div>
       </div>
       <div class="form-group">
-        <label>6. Mã Verify:</label>
-        <div class="verify-box">
+        <label>6. Địa chỉ (Để trống nếu chỉ dùng tọa độ):</label>
+        <input type="text" id="addressInput" value="">
+      </div>
+      <div class="form-group">
+        <label>7. Mã Verify:</label>
+        <div class="input-group">
           <input type="text" id="verifyInput" readonly>
-          <button class="btn-rand" onclick="regenerateCode()">🎲 Mã mới</button>
+          <button class="btn-sub" onclick="regenerateCode()">🎲 Mã mới</button>
         </div>
       </div>
       
@@ -71,7 +78,6 @@
     <div class="preview-section">
       <canvas id="canvas"></canvas>
       <div id="status"></div>
-      <!-- Video ẩn dùng làm luồng đọc dữ liệu -->
       <video id="hiddenVideo" loop muted playsinline style="display:none;"></video>
     </div>
   </div>
@@ -99,7 +105,7 @@
       const month = now.getMonth() + 1;
       const year = now.getFullYear();
 
-      document.getElementById('dateInput').value = `${dayName}, ${day} Tháng ${month},${year}`;
+      document.getElementById('dateInput').value = `${dayName}, ${day} Tháng ${month}, ${year}`;
     }
 
     function generateRandomVerifyCode() {
@@ -109,6 +115,19 @@
         result += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return result + ' Timemark Verified';
+    }
+
+    function getCurrentGPS() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          const lat = position.coords.latitude.toFixed(6);
+          const lng = position.coords.longitude.toFixed(6);
+          document.getElementById('gpsInput').value = `${lat}°N, ${lng}°E`;
+          applyWatermark();
+        }, () => {
+          alert("Không thể lấy vị trí GPS hiện tại từ trình duyệt!");
+        });
+      }
     }
 
     setCurrentDateTime();
@@ -155,7 +174,6 @@
       document.getElementById('verifyInput').value = generateRandomVerifyCode();
     });
 
-    // Vòng lặp render liên tục cho Video
     function renderVideoLoop() {
       if (!isVideo) return;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -169,7 +187,6 @@
       }
     }
 
-    // Hàm vẽ cụm dấu Timemark chung cho cả Ảnh & Video
     function drawOverlay() {
       if (!uploadedImage && !isVideo) {
         canvas.width = 900;
@@ -192,6 +209,7 @@
       const labelText = document.getElementById('labelInput').value;
       const timeText = document.getElementById('timeInput').value;
       const dateText = document.getElementById('dateInput').value;
+      const gpsText = document.getElementById('gpsInput').value;
       const addressText = document.getElementById('addressInput').value;
       const verifyText = document.getElementById('verifyInput').value;
 
@@ -200,7 +218,13 @@
       const paddingLeft = 35 * scale;
       const paddingBottom = 45 * scale;
       const badgeHeight = 48 * scale;
-      const addressBlockHeight = 110 * scale;
+      
+      // Tính chiều cao tổng tùy theo có nhập địa chỉ hay không
+      let textLines = 1; // Luôn có dòng Ngày
+      if (gpsText) textLines++;
+      if (addressText) textLines++;
+      
+      const addressBlockHeight = (30 + textLines * 26) * scale;
       const totalWatermarkHeight = badgeHeight + addressBlockHeight;
       const startY = canvas.height - paddingBottom - totalWatermarkHeight;
 
@@ -227,26 +251,44 @@
       ctx.font = `bold ${32 * scale}px 'Roboto Condensed', sans-serif`;
       ctx.fillText(timeText, paddingLeft + labelWidth + (10 * scale), startY + (34 * scale));
 
-      // 2. NGÀY & ĐỊA CHỈ
+      // 2. NGÀY, TỌA ĐỘ & ĐỊA CHỈ
       const infoStartY = startY + badgeHeight + (20 * scale);
-      ctx.fillStyle = "#f5a623";
-      ctx.fillRect(paddingLeft, infoStartY, 3.5 * scale, 70 * scale);
+      let currentY = infoStartY + (18 * scale);
 
       ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
       ctx.shadowBlur = 4 * scale;
       ctx.shadowOffsetX = 1 * scale;
       ctx.shadowOffsetY = 1 * scale;
 
+      // Dải sọc màu vàng
+      const stripeHeight = (textLines * 26) * scale;
+      ctx.fillStyle = "#f5a623";
+      ctx.fillRect(paddingLeft, infoStartY, 3.5 * scale, stripeHeight);
+
+      // In Ngày tháng
       ctx.fillStyle = "#ffffff";
       ctx.font = `500 ${22 * scale}px 'Roboto', sans-serif`;
-      ctx.fillText(dateText, paddingLeft + (15 * scale), infoStartY + (18 * scale));
+      ctx.fillText(dateText, paddingLeft + (15 * scale), currentY);
 
-      ctx.font = `400 ${20 * scale}px 'Roboto Condensed', sans-serif`;
-      wrapText(ctx, addressText, paddingLeft + (15 * scale), infoStartY + (48 * scale), 650 * scale, 26 * scale);
+      // In Tọa độ GPS (nếu có)
+      if (gpsText) {
+        currentY += 28 * scale;
+        ctx.font = `400 ${20 * scale}px 'Roboto Condensed', sans-serif`;
+        ctx.fillText(gpsText, paddingLeft + (15 * scale), currentY);
+      }
 
+      // In Địa chỉ (nếu có)
+      if (addressText) {
+        currentY += 28 * scale;
+        ctx.font = `400 ${20 * scale}px 'Roboto Condensed', sans-serif`;
+        wrapText(ctx, addressText, paddingLeft + (15 * scale), currentY, 650 * scale, 26 * scale);
+      }
+
+      // Dòng cam kết Timemark
+      currentY += 32 * scale;
       ctx.font = `400 ${15 * scale}px 'Roboto', sans-serif`;
       ctx.fillStyle = "#e2e8f0";
-      ctx.fillText("🛡 Cam kết ngày giờ chân thực bởi Timemark", paddingLeft, infoStartY + (105 * scale));
+      ctx.fillText("🛡 Cam kết ngày giờ chân thực bởi Timemark", paddingLeft, currentY);
 
       // 3. LOGO TIMEMARK (DƯỚI PHẢI)
       const rightX = canvas.width - (160 * scale);
@@ -264,7 +306,7 @@
       ctx.fillStyle = "#cbd5e1";
       ctx.fillText("100% Chân thực", rightX, logoY + (18 * scale));
 
-      // 4. MÃ VERIFY DỌC (Chỉ vẽ trên Ảnh tĩnh, Video bỏ qua)
+      // 4. MÃ VERIFY DỌC (CHỈ HIỂN THỊ TRÊN ẢNH, VIDEO BỎ QUA)
       if (!isVideo) {
         ctx.save();
         const centerY = canvas.height / 2;
@@ -276,6 +318,8 @@
         ctx.fillText("🛡 " + verifyText, 0, 0);
         ctx.restore();
       }
+
+      ctx.restore();
     }
 
     function drawRoundedRect(ctx, x, y, width, height, radius) {
@@ -309,14 +353,11 @@
       ctx.fillText(line, x, y);
     }
 
-    // Thiết lập MediaRecorder để ghi lại Video từ Canvas
     function setupVideoRecorder() {
-      const stream = canvas.captureStream(30); // 30 FPS
+      const stream = canvas.captureStream(30);
       recordedChunks = [];
-      
-      const options = { mimeType: 'video/webm;codecs=vp9' };
       try {
-        mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
       } catch (e) {
         mediaRecorder = new MediaRecorder(stream);
       }
@@ -326,7 +367,6 @@
       };
     }
 
-    // Tải về Ảnh hoặc Video
     function downloadMedia() {
       const now = new Date();
       const filename = `Timemark_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
@@ -338,12 +378,10 @@
         link.href = canvas.toDataURL('image/png');
         link.click();
       } else {
-        // Ghi lại video trong 1 chu kỳ chạy (loop)
-        document.getElementById('status').innerText = "⏳ Đang trích xuất video... Vui lòng đợi...";
+        document.getElementById('status').innerText = "⏳ Đang trích xuất video...";
         recordedChunks = [];
         mediaRecorder.start();
 
-        // Tự động dừng ghi khi video hết 1 vòng
         setTimeout(() => {
           mediaRecorder.stop();
           mediaRecorder.onstop = () => {
