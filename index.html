@@ -264,18 +264,18 @@
       ctx.fillStyle = "#cbd5e1";
       ctx.fillText("100% Chân thực", rightX, logoY + (18 * scale));
 
-      // 4. MÃ VERIFY DỌC
-      ctx.save();
-      const centerY = canvas.height / 2;
-      ctx.translate(canvas.width - (12 * scale), centerY);
-      ctx.rotate(-Math.PI / 2);
-      ctx.font = `400 ${12 * scale}px 'Roboto', sans-serif`;
-      ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-      ctx.textAlign = "center";
-      ctx.fillText("🛡 " + verifyText, 0, 0);
-      ctx.restore();
-
-      ctx.restore();
+      // 4. MÃ VERIFY DỌC (Chỉ vẽ trên Ảnh tĩnh, Video bỏ qua)
+      if (!isVideo) {
+        ctx.save();
+        const centerY = canvas.height / 2;
+        ctx.translate(canvas.width - (12 * scale), centerY);
+        ctx.rotate(-Math.PI / 2);
+        ctx.font = `400 ${12 * scale}px 'Roboto', sans-serif`;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.textAlign = "center";
+        ctx.fillText("🛡 " + verifyText, 0, 0);
+        ctx.restore();
+      }
     }
 
     function drawRoundedRect(ctx, x, y, width, height, radius) {
