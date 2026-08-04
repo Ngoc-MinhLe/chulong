@@ -12,6 +12,10 @@
         body { background: #111827; color: #e5e7eb; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
         h1 { margin-bottom: 20px; color: #f5a623; }        
+        #statistics-summary { background: #1f2937; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        #statistics-summary div { color: #9ca3af; font-size: 13px; }
+        #statistics-summary span { color: #fff; font-weight: bold; }
+
         #app-wrapper { display: none; /* Ẩn theo mặc định */ }
 
         .filter-section { background: #1f2937; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
@@ -49,6 +53,14 @@
         <a href="index.html" class="back-link">&larr; Quay lại trang chính</a>
         <h1>Lịch sử hoạt động</h1>
 
+        <div id="statistics-summary">
+            <div>Tổng số ảnh tải lên: <span id="stat-img-upload">0</span></div>
+            <div>Tổng số video tải lên: <span id="stat-vid-upload">0</span></div>
+            <div>Tổng số ảnh tải về: <span id="stat-img-download">0</span></div>
+            <div>Tổng số video tải về: <span id="stat-vid-download">0</span></div>
+        </div>
+
+
         <div class="filter-section">
             <div class="filter-group">
                 <label for="start-date">Từ ngày</label>
@@ -66,7 +78,6 @@
             <thead>
                 <tr>
                     <th>Thời gian</th>
-                    <th>Session ID</th>
                     <th>Hành động</th>
                     <th>Chi tiết</th>
                 </tr>
@@ -119,13 +130,13 @@
             const filterBtn = document.getElementById('filter-btn');
             const loadMoreBtn = document.getElementById('load-more-btn');
 
-            filterBtn.addEventListener('click', () => {
+            filterBtn.addEventListener('click', () => { // Khi nhấn nút Lọc
                 document.getElementById('log-body').innerHTML = '';
                 lastVisibleDoc = null;
-                loadLogs(true);
+                updateStatisticsAndLogs(true); // Gọi hàm mới
             });
-            loadMoreBtn.addEventListener('click', () => loadLogs(false));
-            loadLogs(true);
+            loadMoreBtn.addEventListener('click', () => updateStatisticsAndLogs(false)); // Khi nhấn Tải thêm
+            updateStatisticsAndLogs(true); // Tải lần đầu khi trang được khởi tạo
         }
 
         function buildQuery() {
@@ -147,10 +158,10 @@
             return query;
         }
 
-        async function loadLogs(isNewQuery = false) {
+        async function updateStatisticsAndLogs(isNewQuery = false) {
             if (isFetching) return;
             isFetching = true;
-
+        
             const loadingEl = document.getElementById('loading');
             const loadMoreBtn = document.getElementById('load-more-btn');
             loadingEl.innerText = "Đang tải...";
@@ -159,7 +170,17 @@
 
             if (isNewQuery) {
                 currentQuery = buildQuery();
+                // --- Fetch ALL logs for statistics (without pagination) ---
+                try {
+                    const allLogsSnapshot = await currentQuery.get();
+                    displayStatistics(allLogsSnapshot.docs.map(doc => doc.data()));
+                } catch (error) {
+                    console.error("Error fetching all logs for stats:", error);
+                    // Don't block the main log display if stats fail
+                }
             }
+        
+            const logBody = document.getElementById('log-body'); // Lấy lại logBody ở đây
 
             let queryToRun = currentQuery.limit(LOGS_PER_PAGE);
             if (lastVisibleDoc) {
@@ -167,9 +188,7 @@
             }
 
             try {
-                const querySnapshot = await queryToRun.get();
-                const logBody = document.getElementById('log-body');
-
+                const querySnapshot = await queryToRun.get(); // Fetch paginated logs for display
                 if (isNewQuery && querySnapshot.empty) {
                     loadingEl.innerText = "Không có dữ liệu log nào phù hợp.";
                     return;
@@ -181,9 +200,8 @@
                     const log = doc.data();
                     const row = logBody.insertRow();
                     row.insertCell(0).innerText = log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : 'N/A';
-                    row.insertCell(1).innerText = log.sessionId || 'N/A';
-                    row.insertCell(2).innerText = log.action;
-                    row.insertCell(3).innerHTML = `<div class="details-json">${JSON.stringify(log.details, null, 2)}</div>`;
+                    row.insertCell(1).innerText = log.action;
+                    row.insertCell(2).innerHTML = `<div class="details-json">${JSON.stringify(log.details, null, 2)}</div>`;
                 });
 
                 lastVisibleDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
@@ -195,6 +213,34 @@
             } finally {
                 isFetching = false;
             }
+        }
+
+        function displayStatistics(logs) {
+            let imgUploads = 0;
+            let vidUploads = 0;
+            let imgDownloads = 0;
+            let vidDownloads = 0;
+
+            logs.forEach(log => {
+                if (log.action === 'upload_file' && log.details && log.details.fileType) {
+                    if (log.details.fileType.startsWith('image/')) {
+                        imgUploads++;
+                    } else if (log.details.fileType.startsWith('video/')) {
+                        vidUploads++;
+                    }
+                } else if (log.action === 'download_media' && log.details && log.details.type) {
+                    if (log.details.type === 'image') {
+                        imgDownloads++;
+                    } else if (log.details.type === 'video') {
+                        vidDownloads++;
+                    }
+                }
+            });
+
+            document.getElementById('stat-img-upload').innerText = imgUploads;
+            document.getElementById('stat-vid-upload').innerText = vidUploads;
+            document.getElementById('stat-img-download').innerText = imgDownloads;
+            document.getElementById('stat-vid-download').innerText = vidDownloads;
         }
     </script>
 </body>
