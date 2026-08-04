@@ -68,29 +68,25 @@
       </div>
       <div class="form-group">
         <label>4. Giờ (HH:MM):</label>
-        <input type="text" id="timeInput">
+        <input type="time" id="timeInput" onchange="applyWatermark()">
       </div>
       <div class="form-group">
         <label>5. Ngày tháng:</label>
-        <input type="text" id="dateInput">
+        <input type="date" id="dateInput" onchange="applyWatermark()">
       </div>
       <div class="form-group">
-        <label>6. Thứ trong tuần:</label>
-        <input type="text" id="dayNameInput">
-      </div>
-      <div class="form-group">
-        <label>7. Tọa độ GPS (Nếu có):</label>
+        <label>6. Tọa độ GPS (Nếu có):</label>
         <div class="input-group">
           <input type="text" id="gpsInput" value="">
           <button class="btn-sub" onclick="getCurrentGPS()">📍 GPS thực</button>
         </div>
       </div>
       <div class="form-group">
-        <label>8. Địa chỉ:</label>
+        <label>7. Địa chỉ:</label>
         <input type="text" id="addressInput" value="Thôn Đầm Môn, X.Vạn Thạnh, H.Vạn Ninh, Khánh Hòa">
       </div>
       <div class="form-group">
-        <label>9. Mã Verify:</label>
+        <label>8. Mã Verify:</label>
         <div class="input-group">
           <input type="text" id="verifyInput" readonly>
           <button class="btn-sub" onclick="regenerateCode()">🎲 Mã mới</button>

@@ -15,13 +15,13 @@ function setCurrentDateTime() {
   document.getElementById('timeInput').value = `${hours}:${minutes}`;
 
   const days = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
-  const dayName = days[now.getDay()];
   const day = String(now.getDate()).padStart(2, '0');
   const month = now.getMonth() + 1;
+  const monthPadded = String(month).padStart(2, '0');
   const year = now.getFullYear();
 
-  document.getElementById('dateInput').value = `${day} Tháng ${month},${year}`;
-  document.getElementById('dayNameInput').value = dayName;
+  // Định dạng YYYY-MM-DD cho input type="date"
+  document.getElementById('dateInput').value = `${year}-${monthPadded}-${day}`;
 }
 
 function generateRandomVerifyCode() {
@@ -163,12 +163,29 @@ function drawOverlay() {
   }
 }
 
+function formatDateForCanvas(isoDate) {
+  if (!isoDate) return '';
+  const [year, month, day] = isoDate.split('-');
+  return `${day} Tháng ${parseInt(month, 10)},${year}`;
+}
+
+function getDayNameFromDate(isoDate) {
+  if (!isoDate) return '';
+  const dateObj = new Date(isoDate + 'T00:00:00'); // Tránh lỗi timezone
+  const days = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+  return days[dateObj.getDay()];
+}
+
 // ================= MẪU 1: BADGE GIỜ TRẮNG/CAM =================
 function drawTemplate1(scale) {
   const labelText = document.getElementById('labelInput').value;
   const timeText = document.getElementById('timeInput').value;
-  const dateText = document.getElementById('dateInput').value;
-  const dayNameText = document.getElementById('dayNameInput').value;
+  
+  const rawDate = document.getElementById('dateInput').value;
+  // Tự động lấy "Thứ" từ "Ngày"
+  const dateText = formatDateForCanvas(rawDate);
+  const dayNameText = getDayNameFromDate(rawDate);
+
   const fullDateStr = `${dayNameText}, ${dateText}`;
   const addressText = document.getElementById('addressInput').value;
   const gpsText = document.getElementById('gpsInput').value;
@@ -240,8 +257,12 @@ function drawTemplate1(scale) {
 function drawTemplate2(scale) {
   const labelText = document.getElementById('labelInput').value;
   const timeText = document.getElementById('timeInput').value;
-  const dateText = document.getElementById('dateInput').value;
-  const dayNameText = document.getElementById('dayNameInput').value;
+
+  const rawDate = document.getElementById('dateInput').value;
+  // Tự động lấy "Thứ" từ "Ngày"
+  const dateText = formatDateForCanvas(rawDate);
+  const dayNameText = getDayNameFromDate(rawDate);
+  
   const gpsText = document.getElementById('gpsInput').value;
   const addressText = document.getElementById('addressInput').value;
 
