@@ -8,6 +8,11 @@ let mediaRecorder = null;
 let recordedChunks = [];
 let animationFrameId = null;
 
+// Icon "Khiên có dấu tích" dưới dạng SVG. Đây là cách tốt nhất để có icon đúng ý muốn.
+const verifiedIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 2L2 6v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V6L12 2zm-1.05 16.5L6.4 14.95l1.4-1.4 2.15 2.15 4.25-4.25 1.4 1.4L10.95 18.5z"/></svg>`;
+const verifiedIcon = new Image();
+verifiedIcon.src = 'data:image/svg+xml;base64,' + btoa(verifiedIconSVG);
+
 function setCurrentDateTime() {
   const now = new Date();
   const hours = String(now.getHours()).padStart(2, '0');
@@ -127,6 +132,23 @@ function drawOverlay() {
     drawTemplate2(scale);
   }
 
+  // VẼ DÒNG CAM KẾT (GÓC DƯỚI TRÁI)
+  const commitmentText = " Cam kết ngày giờ chân thực bởi Timemark";
+  const commitmentX = 35 * scale;
+  const commitmentY = canvas.height - (30 * scale);
+  const commitmentIconSize = 18 * scale;
+  
+  ctx.save();
+  ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+  ctx.shadowBlur = 4 * scale;
+  // Vẽ icon
+  ctx.drawImage(verifiedIcon, commitmentX, commitmentY - commitmentIconSize * 0.85, commitmentIconSize, commitmentIconSize);
+  // Vẽ text
+  ctx.font = `400 ${14 * scale}px 'Roboto', sans-serif`;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+  ctx.fillText(commitmentText, commitmentX + commitmentIconSize, commitmentY);
+  ctx.restore();
+
   // VẼ LOGO TIMEMARK (GÓC DƯỚI PHẢI)
   const rightX = canvas.width - (160 * scale);
   const logoY = canvas.height - (55 * scale);
@@ -156,9 +178,13 @@ function drawOverlay() {
     ctx.translate(canvas.width - (12 * scale), centerY);
     ctx.rotate(-Math.PI / 2);
     ctx.font = `400 ${12 * scale}px 'Roboto', sans-serif`;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
     ctx.textAlign = "center";
-    ctx.fillText("🛡 " + verifyText, 0, 0);
+    // Đo chiều rộng của text để đặt icon đúng vị trí
+    const textWidth = ctx.measureText(" " + verifyText).width;
+    const iconSize = 14 * scale;
+    ctx.drawImage(verifiedIcon, -textWidth/2 - iconSize, -iconSize/2, iconSize, iconSize);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.fillText(" " + verifyText, 0, 0);
     ctx.restore();
   }
 }
