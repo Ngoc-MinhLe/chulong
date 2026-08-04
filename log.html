@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch sử hoạt động - Timemark</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
+        body { background: #111827; color: #e5e7eb; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { margin-bottom: 20px; color: #f5a623; }
+        
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111827; z-index: 100; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        #login-box { background: #1f2937; padding: 30px; border-radius: 8px; text-align: center; border: 1px solid #374151; }
+        #login-box h2 { color: #f5a623; margin-bottom: 20px; }
+        #password-input { padding: 12px; font-size: 16px; width: 250px; border-radius: 6px; border: 1px solid #4b5563; background: #111827; color: #fff; }
+        #login-button { display: block; width: 100%; padding: 12px; background: #f5a623; border: none; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 15px; }
+        #login-button:hover { background: #e09216; }
+        #error-message { color: #f87171; margin-top: 10px; height: 20px; }
+
+        #app-wrapper { display: none; /* Ẩn theo mặc định */ }
+
+        .filter-section { background: #1f2937; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-group label { font-size: 12px; color: #9ca3af; margin-bottom: 5px; }
+        .filter-group input { padding: 8px; border-radius: 6px; border: 1px solid #4b5563; background: #111827; color: #fff; }
+        .filter-btn { padding: 8px 15px; background: #f5a623; border: none; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer; align-self: flex-end; }
+        .filter-btn:hover { background: #e09216; }
+
+        #load-more-container { text-align: center; margin-top: 20px; }
+        #load-more-btn { padding: 10px 20px; background: #374151; border: 1px solid #4b5563; color: #f5a623; border-radius: 6px; cursor: pointer; }
+        #load-more-btn:hover { background: #4b5563; }
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: #374151; }
+        th, td { padding: 12px 15px; text-align: left; border: 1px solid #4b5563; }
+        th { font-weight: 700; }
+        tbody tr:nth-child(even) { background: #1f2937; }
+        .details-json {
+            background-color: #000;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #94a3b8;
+        }
+        #loading { font-size: 1.2em; color: #f5a623; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #f5a623; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div id="login-screen">
+        <div id="login-box">
+          <h2>Lịch sử hoạt động</h2>
+          <input type="password" id="password-input" placeholder="Nhập mật khẩu">
+          <p id="error-message"></p>
+          <button id="login-button">Truy cập</button>
+        </div>
+    </div>
+
+    <div id="app-wrapper" class="container">
+        <a href="index.html" class="back-link">&larr; Quay lại trang chính</a>
+        <h1>Lịch sử hoạt động</h1>
+
+        <div class="filter-section">
+            <div class="filter-group">
+                <label for="start-date">Từ ngày</label>
+                <input type="date" id="start-date">
+            </div>
+            <div class="filter-group">
+                <label for="end-date">Đến ngày</label>
+                <input type="date" id="end-date">
+            </div>
+            <button class="filter-btn" id="filter-btn">Lọc</button>
+        </div>
+
+        <p id="loading">Đang tải dữ liệu log...</p>
+        <table id="log-table">
+            <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Session ID</th>
+                    <th>Hành động</th>
+                    <th>Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody id="log-body">
+                <!-- Dữ liệu log sẽ được chèn vào đây -->
+            </tbody>
+        </table>
+        <div id="load-more-container">
+            <button id="load-more-btn" style="display: none;">Tải thêm...</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+
+    <!-- App Config -->
+    <script src="config.js"></script>
+
+    <!-- Firebase Init -->
+    <script src="firebase-init.js"></script>
+
+    <script>
+        const LOGS_PER_PAGE = 25;
+        let lastVisibleDoc = null;
+        let isFetching = false;
+        let currentQuery = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginScreen = document.getElementById('login-screen');
+            const appWrapper = document.getElementById('app-wrapper');
+            const passwordInput = document.getElementById('password-input');
+            const loginButton = document.getElementById('login-button');
+            const errorMessage = document.getElementById('error-message');
+            const correctPassword = APP_CONFIG.logPassword;
+
+            function attemptLogin() {
+                if (passwordInput.value === correctPassword) {
+                    loginScreen.style.display = 'none';
+                    appWrapper.style.display = 'block';
+                    initializeLogPage(); // Khởi chạy trang log sau khi đăng nhập thành công
+                } else {
+                    errorMessage.textContent = 'Mật khẩu không đúng!';
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                }
+            }
+
+            loginButton.addEventListener('click', attemptLogin);
+            passwordInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    attemptLogin();
+                }
+            });
+
+            passwordInput.focus();
+        });
+
+        function initializeLogPage() {
+            const filterBtn = document.getElementById('filter-btn');
+            const loadMoreBtn = document.getElementById('load-more-btn');
+
+            filterBtn.addEventListener('click', () => {
+                document.getElementById('log-body').innerHTML = '';
+                lastVisibleDoc = null;
+                loadLogs(true);
+            });
+            loadMoreBtn.addEventListener('click', () => loadLogs(false));
+            loadLogs(true);
+        }
+
+        function buildQuery() {
+            const db = firebase.firestore();
+            let query = db.collection("edit_logs").orderBy("timestamp", "desc");
+
+            const startDateVal = document.getElementById('start-date').value;
+            const endDateVal = document.getElementById('end-date').value;
+
+            if (startDateVal) {
+                query = query.where("timestamp", ">=", new Date(startDateVal));
+            }
+            if (endDateVal) {
+                // Thêm 1 ngày để bao gồm cả ngày kết thúc
+                const endDate = new Date(endDateVal);
+                endDate.setDate(endDate.getDate() + 1);
+                query = query.where("timestamp", "<", endDate);
+            }
+            return query;
+        }
+
+        async function loadLogs(isNewQuery = false) {
+            if (isFetching) return;
+            isFetching = true;
+
+            const loadingEl = document.getElementById('loading');
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            loadingEl.innerText = "Đang tải...";
+            loadingEl.style.display = 'block';
+            loadMoreBtn.style.display = 'none';
+
+            if (isNewQuery) {
+                currentQuery = buildQuery();
+            }
+
+            let queryToRun = currentQuery.limit(LOGS_PER_PAGE);
+            if (lastVisibleDoc) {
+                queryToRun = queryToRun.startAfter(lastVisibleDoc);
+            }
+
+            try {
+                const querySnapshot = await queryToRun.get();
+                const logBody = document.getElementById('log-body');
+
+                if (isNewQuery && querySnapshot.empty) {
+                    loadingEl.innerText = "Không có dữ liệu log nào phù hợp.";
+                    return;
+                }
+                
+                loadingEl.style.display = 'none';
+
+                querySnapshot.forEach(doc => {
+                    const log = doc.data();
+                    const row = logBody.insertRow();
+                    row.insertCell(0).innerText = log.timestamp ? log.timestamp.toDate().toLocaleString('vi-VN') : 'N/A';
+                    row.insertCell(1).innerText = log.sessionId || 'N/A';
+                    row.insertCell(2).innerText = log.action;
+                    row.insertCell(3).innerHTML = `<div class="details-json">${JSON.stringify(log.details, null, 2)}</div>`;
+                });
+
+                lastVisibleDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
+                loadMoreBtn.style.display = querySnapshot.size === LOGS_PER_PAGE ? 'inline-block' : 'none';
+
+            } catch (error) {
+                loadingEl.innerText = "Lỗi khi tải dữ liệu: " + error.message;
+                console.error("Error fetching logs:", error);
+            } finally {
+                isFetching = false;
+            }
+        }
+    </script>
+</body>
+</html>

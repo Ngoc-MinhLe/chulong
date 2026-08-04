@@ -12,6 +12,16 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
     body { background: #111827; color: #fff; padding: 20px; display: flex; flex-direction: column; align-items: center; }
     h1 { margin-bottom: 20px; color: #f5a623; font-size: 24px; }
+    #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111827; z-index: 100; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+    #login-box { background: #1f2937; padding: 30px; border-radius: 8px; text-align: center; border: 1px solid #374151; }
+    #login-box h2 { color: #f5a623; margin-bottom: 20px; }
+    #password-input { padding: 12px; font-size: 16px; width: 250px; border-radius: 6px; border: 1px solid #4b5563; background: #111827; color: #fff; }
+    #login-button { display: block; width: 100%; padding: 12px; background: #f5a623; border: none; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 15px; }
+    #login-button:hover { background: #e09216; }
+    #error-message { color: #f87171; margin-top: 10px; height: 20px; }
+
+    #app-wrapper { display: none; /* Ẩn theo mặc định */ }
+
     .container { display: flex; flex-wrap: wrap; gap: 20px; max-width: 1200px; width: 100%; }
     .form-section { flex: 1; min-width: 320px; background: #1f2937; padding: 20px; border-radius: 8px; border: 1px solid #374151; }
     .form-group { margin-bottom: 12px; }
@@ -31,23 +41,16 @@
   </style>
 </head>
 <body>
-  <script>
-    // Yêu cầu mật khẩu để truy cập
-    (function() {
-      const correctPassword = "long123321";
-      const enteredPassword = prompt("Vui lòng nhập mật khẩu để sử dụng:");
-      if (enteredPassword === correctPassword) {
-        // Nếu đúng, hiển thị nội dung chính của trang
-        document.addEventListener('DOMContentLoaded', function() {
-          document.getElementById('app-wrapper').style.display = 'block';
-        });
-      } else {
-        // Nếu sai, hiển thị thông báo lỗi và ẩn nội dung
-        document.body.innerHTML = '<div style="text-align: center; padding-top: 50px; color: #f87171;"><h1>Mật khẩu không đúng!</h1><p>Vui lòng tải lại trang và thử lại.</p></div>';
-      }
-    })();
-  </script>
-  <div id="app-wrapper" style="display: none;">
+  <div id="login-screen">
+    <div id="login-box">
+      <h2>Timemark Watermark</h2>
+      <input type="password" id="password-input" placeholder="Nhập mật khẩu">
+      <p id="error-message"></p>
+      <button id="login-button">Truy cập</button>
+    </div>
+  </div>
+
+  <div id="app-wrapper">
     <h1>Timemark Watermark (Photo & Video)</h1>
     <div class="container">
     <div class="form-section">
@@ -95,6 +98,7 @@
       
       <button class="btn" onclick="applyWatermark()">Cập Nhật Con Dấu</button>
       <button class="btn btn-download" id="downloadBtn" onclick="downloadMedia()">Tải Tệp Về</button>
+      <a href="log.html" target="_blank" class="btn" style="background-color: #374151; margin-top: 20px;">Xem Log Hoạt Động</a>
     </div>
 
     <div class="preview-section">
@@ -104,6 +108,50 @@
     </div>
     </div>
   </div>
-  <script src="app.js" defer></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+
+  <!-- App Config -->
+  <script src="config.js"></script>
+
+  <!-- Firebase Init & Logging Logic -->
+  <script src="firebase-init.js"></script>
+
+  <!-- Main App Logic -->
+  <script src="app.js"></script> 
+
+  <!-- Login Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const loginScreen = document.getElementById('login-screen');
+      const appWrapper = document.getElementById('app-wrapper');
+      const passwordInput = document.getElementById('password-input');
+      const loginButton = document.getElementById('login-button');
+      const errorMessage = document.getElementById('error-message');
+      const correctPassword = APP_CONFIG.password;
+
+      function attemptLogin() {
+        if (passwordInput.value === correctPassword) {
+          loginScreen.style.display = 'none';
+          appWrapper.style.display = 'block';
+        } else {
+          errorMessage.textContent = 'Mật khẩu không đúng!';
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      }
+
+      loginButton.addEventListener('click', attemptLogin);
+      passwordInput.addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+          attemptLogin();
+        }
+      });
+
+      passwordInput.focus();
+    });
+  </script>
 </body>
 </html>

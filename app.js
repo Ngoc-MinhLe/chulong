@@ -6,6 +6,7 @@ let uploadedImage = null;
 let isVideo = false;
 let mediaRecorder = null;
 let recordedChunks = [];
+let currentSessionId = null; // ID cho phiên làm việc hiện tại
 let animationFrameId = null;
 
 // Icon "Khiên có dấu tích" dưới dạng SVG. Đây là cách tốt nhất để có icon đúng ý muốn.
@@ -59,6 +60,16 @@ function regenerateCode() {
 document.getElementById('mediaInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  // Tạo một Session ID mới cho mỗi lần tải file
+  currentSessionId = `session_${Date.now()}`;
+
+  // LOGGING: Ghi log hành động tải file lên
+  logAction('upload_file', {
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size
+  }, currentSessionId);
 
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
   video.pause();
@@ -384,17 +395,51 @@ function setupVideoRecorder() {
 }
 
 function downloadMedia() {
+  // VALIDATION: Bắt buộc người dùng nhập Tên đơn vị và Địa chỉ
+  const labelValue = document.getElementById('labelInput').value.trim();
+  const addressValue = document.getElementById('addressInput').value.trim();
+
+  if (!labelValue || !addressValue) {
+    alert('Vui lòng nhập đầy đủ "Tên đơn vị / Nhãn" và "Địa chỉ" trước khi tải về.');
+    return; // Dừng hàm nếu thông tin chưa đủ
+  }
+
   const now = new Date();
   const filename = `Timemark_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
 
   if (!isVideo) {
     if (!uploadedImage) return alert("Vui lòng chọn ảnh!");
+
+    // TẠO BẢN GHI LOG "TRẠNG THÁI CUỐI CÙNG"
+    const watermarkContent = {
+        template: document.getElementById('templateSelect').options[document.getElementById('templateSelect').selectedIndex].text,
+        label: document.getElementById('labelInput').value,
+        time: document.getElementById('timeInput').value,
+        date: document.getElementById('dateInput').value,
+        gps: document.getElementById('gpsInput').value,
+        address: document.getElementById('addressInput').value,
+        verify_code: document.getElementById('verifyInput').value
+    };
+    logAction('download_media', { type: 'image', filename: `${filename}.png`, watermark_content: watermarkContent }, currentSessionId);
+
     const link = document.createElement('a');
     link.download = `${filename}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   } else {
     document.getElementById('status').innerText = "⏳ Đang trích xuất video...";
+    
+    // LOGGING: Ghi log hành động tải video
+    const watermarkContent = {
+        template: document.getElementById('templateSelect').options[document.getElementById('templateSelect').selectedIndex].text,
+        label: document.getElementById('labelInput').value,
+        time: document.getElementById('timeInput').value,
+        date: document.getElementById('dateInput').value,
+        gps: document.getElementById('gpsInput').value,
+        address: document.getElementById('addressInput').value,
+    };
+    logAction('download_media', { type: 'video', filename: `${filename}.webm`, duration: video.duration, watermark_content: watermarkContent }, currentSessionId);
+
     recordedChunks = [];
     mediaRecorder.start();
 
