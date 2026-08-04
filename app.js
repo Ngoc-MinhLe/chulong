@@ -374,7 +374,7 @@ function drawTemplate3(scale) {
   // Ô Camera vàng
   //ctx.fillStyle = "#f5a623";
  // drawRoundedRect(ctx, logoRightX, logoTopY, 32 * scale, 24 * scale, 5 * scale);
-  ctx.fill();
+  // ctx.fill(); // Đã xóa lệnh fill() thừa
 
   // Chữ 'Time' bên trong ống kính camera
  // ctx.font = `bold ${10 * scale}px 'Roboto', sans-serif`;
@@ -383,7 +383,7 @@ function drawTemplate3(scale) {
   //ctx.fillText("Time", logoRightX + (16 * scale), logoTopY + (15 * scale));
 
   // Nút bấm camera nhỏ bên trên
-  ctx.fillRect(logoRightX + (10 * scale), logoTopY - (3 * scale), 12 * scale, 3 * scale);
+  //ctx.fillRect(logoRightX + (10 * scale), logoTopY - (3 * scale), 12 * scale, 3 * scale);
 
   // Chữ 'Timemark Camera' màu trắng bên cạnh
   ctx.font = `500 ${18 * scale}px 'Roboto', sans-serif`;
@@ -584,13 +584,45 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 function setupVideoRecorder() {
   const stream = canvas.captureStream(30);
   recordedChunks = [];
-  try {
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
-  } catch (e) {
-    mediaRecorder = new MediaRecorder(stream);
+  let options = {}; // Khởi tạo rỗng, sẽ được điền sau
+  let preferredMimeType = 'video/webm'; // Mặc định cho tên file nếu không tìm thấy gì tốt hơn
+  
+  // Ưu tiên MP4 nếu được hỗ trợ
+  if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')) {
+    options = { mimeType: 'video/mp4;codecs=avc1' };
+    preferredMimeType = 'video/mp4';
+    console.log("Recording in MP4 (H.264) format.");
+  } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+    options = { mimeType: 'video/webm;codecs=vp9' };
+    preferredMimeType = 'video/webm';
+    console.log("Recording in WebM (VP9) format.");
+  } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+    options = { mimeType: 'video/webm;codecs=vp8' };
+    preferredMimeType = 'video/webm';
+    console.log("Recording in WebM (VP8) format.");
+  } else {
+    // Nếu không có codec cụ thể nào được hỗ trợ, thử với webm chung
+    console.warn("No specific video codec supported, trying generic webm.");
+    options = { mimeType: 'video/webm' };
+    preferredMimeType = 'video/webm';
   }
 
-  mediaRecorder.ondataavailable = function(e) {
+  try {
+    mediaRecorder = new MediaRecorder(stream, options);
+  } catch (e) {
+    console.error("Failed to create MediaRecorder with specified options, falling back to generic webm:", e);
+    // Fallback nếu các tùy chọn cụ thể không hoạt động
+    try { // Thử lại với tùy chọn webm chung nhất
+        options = { mimeType: 'video/webm' };
+        mediaRecorder = new MediaRecorder(stream, options);
+    } catch (fallbackError) {
+        console.error("Failed to create MediaRecorder even with generic webm options:", fallbackError);
+        alert("Trình duyệt của bạn không hỗ trợ ghi video. Vui lòng thử trình duyệt khác.");
+        return; // Không thể ghi video
+    }
+  }
+
+  mediaRecorder.ondataavailable = function(e) { // Đặt ondataavailable sau khi mediaRecorder được khởi tạo
     if (e.data.size > 0) recordedChunks.push(e.data);
   };
 }
@@ -636,7 +668,8 @@ function downloadMedia() {
         gps: document.getElementById('gpsInput').value,
         address: document.getElementById('addressInput').value,
     };
-    logAction('download_media', { type: 'video', filename: `${filename}.webm`, duration: video.duration, watermark_content: watermarkContent }, currentSessionId);
+    const fileExtension = mediaRecorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
+    logAction('download_media', { type: 'video', filename: `${filename}.${fileExtension}`, duration: video.duration, mimeType: mediaRecorder.mimeType, watermark_content: watermarkContent }, currentSessionId);
 
     recordedChunks = [];
     mediaRecorder.start();
@@ -644,11 +677,11 @@ function downloadMedia() {
     setTimeout(() => {
       mediaRecorder.stop();
       mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType }); // Sử dụng mimeType thực tế
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${filename}.webm`;
+        a.download = `${filename}.${fileExtension}`;
         a.click();
         document.getElementById('status').innerText = "✅ Tải video thành công!";
       };
