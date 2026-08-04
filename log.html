@@ -11,16 +11,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
         body { background: #111827; color: #e5e7eb; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
-        h1 { margin-bottom: 20px; color: #f5a623; }
-        
-        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111827; z-index: 100; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        #login-box { background: #1f2937; padding: 30px; border-radius: 8px; text-align: center; border: 1px solid #374151; }
-        #login-box h2 { color: #f5a623; margin-bottom: 20px; }
-        .login-input { padding: 12px; font-size: 16px; width: 250px; border-radius: 6px; border: 1px solid #4b5563; background: #111827; color: #fff; display: block; margin-bottom: 10px; }
-        #login-button { display: block; width: 100%; padding: 12px; background: #f5a623; border: none; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 15px; }
-        #login-button:hover { background: #e09216; }
-        #error-message { color: #f87171; margin-top: 10px; height: 20px; }
-
+        h1 { margin-bottom: 20px; color: #f5a623; }        
         #app-wrapper { display: none; /* Ẩn theo mặc định */ }
 
         .filter-section { background: #1f2937; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; }
@@ -54,17 +45,7 @@
     </style>
 </head>
 <body>
-    <div id="login-screen">
-        <div id="login-box">
-          <h2>Lịch sử hoạt động</h2>
-          <input type="email" id="email-input" class="login-input" placeholder="Email">
-          <input type="password" id="password-input" class="login-input" placeholder="Mật khẩu">
-          <p id="error-message"></p>
-          <button id="login-button">Truy cập</button>
-        </div>
-    </div>
-
-    <div id="app-wrapper" class="container">
+    <div id="app-wrapper" class="container" style="display: none;">
         <a href="index.html" class="back-link">&larr; Quay lại trang chính</a>
         <h1>Lịch sử hoạt động</h1>
 
@@ -115,39 +96,23 @@
         let isFetching = false;
         let currentQuery = null;
         
-        document.addEventListener('DOMContentLoaded', function() {
-            const loginScreen = document.getElementById('login-screen');
-            const appWrapper = document.getElementById('app-wrapper');
-            const emailInput = document.getElementById('email-input');
-            const passwordInput = document.getElementById('password-input');
-            const loginButton = document.getElementById('login-button');
-            const errorMessage = document.getElementById('error-message');
-
-            async function attemptLogin() {
-                const email = emailInput.value;
-                const password = passwordInput.value;
-                errorMessage.textContent = '';
-                loginButton.disabled = true;
-
-                try {
-                    await auth.signInWithEmailAndPassword(email, password);
-                    loginScreen.style.display = 'none';
-                    appWrapper.style.display = 'block';
-                    initializeLogPage(); // Khởi chạy trang log sau khi đăng nhập thành công
-                } catch (error) {
-                    errorMessage.textContent = 'Email hoặc mật khẩu không đúng!';
+        // Sử dụng onAuthStateChanged để quản lý phiên đăng nhập một cách nhất quán
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // Người dùng đã đăng nhập, kiểm tra xem có phải admin không
+                const adminDoc = await db.collection('admins').doc(user.uid).get();
+                if (adminDoc.exists) {
+                    // Là admin -> Hiển thị trang log
+                    document.getElementById('app-wrapper').style.display = 'block'; // Hiển thị nội dung chính
+                    initializeLogPage();
+                } else {
+                    // Không phải admin -> Chặn truy cập
+                    document.body.innerHTML = '<div style="text-align: center; padding-top: 50px; color: #f87171;"><h1>Truy cập bị từ chối</h1><p>Bạn không có quyền xem trang này.</p></div>';
                 }
-                loginButton.disabled = false;
+            } else {
+                // Không có ai đăng nhập. Chuyển hướng về trang chính để đăng nhập.
+                window.location.href = 'index.html';
             }
-
-            loginButton.addEventListener('click', attemptLogin);
-            passwordInput.addEventListener('keyup', function(event) {
-                if (event.key === 'Enter') {
-                    attemptLogin();
-                }
-            });
-
-            emailInput.focus();
         });
 
         function initializeLogPage() {
