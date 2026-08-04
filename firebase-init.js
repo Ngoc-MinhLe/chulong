@@ -13,6 +13,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const firebaseApp = firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth(); // Khởi tạo dịch vụ Authentication
 
 // **GIẢI PHÁP KỸ THUẬT CHO LỖI MẠNG**
 // Thêm cài đặt này để thử khắc phục các lỗi như "Could not reach Cloud Firestore backend".

@@ -15,7 +15,7 @@
     #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111827; z-index: 100; display: flex; justify-content: center; align-items: center; flex-direction: column; }
     #login-box { background: #1f2937; padding: 30px; border-radius: 8px; text-align: center; border: 1px solid #374151; }
     #login-box h2 { color: #f5a623; margin-bottom: 20px; }
-    #password-input { padding: 12px; font-size: 16px; width: 250px; border-radius: 6px; border: 1px solid #4b5563; background: #111827; color: #fff; }
+    .login-input { padding: 12px; font-size: 16px; width: 250px; border-radius: 6px; border: 1px solid #4b5563; background: #111827; color: #fff; display: block; margin-bottom: 10px; }
     #login-button { display: block; width: 100%; padding: 12px; background: #f5a623; border: none; border-radius: 6px; color: #000; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 15px; }
     #login-button:hover { background: #e09216; }
     #error-message { color: #f87171; margin-top: 10px; height: 20px; }
@@ -44,7 +44,8 @@
   <div id="login-screen">
     <div id="login-box">
       <h2>Timemark Watermark</h2>
-      <input type="password" id="password-input" placeholder="Nhập mật khẩu">
+      <input type="email" id="email-input" class="login-input" placeholder="Email">
+      <input type="password" id="password-input" class="login-input" placeholder="Mật khẩu">
       <p id="error-message"></p>
       <button id="login-button">Truy cập</button>
     </div>
@@ -67,7 +68,7 @@
       </div>
       <div class="form-group">
         <label>3. Tên đơn vị / Nhãn:</label>
-        <input type="text" id="labelInput" value="Cửa Hàng Tạp Hóa PhiLip">
+        <input type="text" id="labelInput" value="">
       </div>
       <div class="form-group">
         <label>4. Giờ (HH:MM):</label>
@@ -86,7 +87,7 @@
       </div>
       <div class="form-group">
         <label>7. Địa chỉ:</label>
-        <input type="text" id="addressInput" value="Thôn Đầm Môn, X.Vạn Thạnh, H.Vạn Ninh, Khánh Hòa">
+        <input type="text" id="addressInput" value="">
       </div>
       <div class="form-group">
         <label>8. Mã Verify:</label>
@@ -98,7 +99,7 @@
       
       <button class="btn" onclick="applyWatermark()">Cập Nhật Con Dấu</button>
       <button class="btn btn-download" id="downloadBtn" onclick="downloadMedia()">Tải Tệp Về</button>
-      <a href="log.html" target="_blank" class="btn" style="background-color: #374151; margin-top: 20px;">Xem Log Hoạt Động</a>
+      <a id="view-log-btn" href="log.html" target="_blank" class="btn" style="background-color: #374151; margin-top: 20px; display: none;">Xem Log Hoạt Động</a>
     </div>
 
     <div class="preview-section">
@@ -111,10 +112,10 @@
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
 
-  <!-- App Config -->
-  <script src="config.js"></script>
+  <!-- App Config (đã bị xóa) -->
 
   <!-- Firebase Init & Logging Logic -->
   <script src="firebase-init.js"></script>
@@ -127,20 +128,34 @@
     document.addEventListener('DOMContentLoaded', function() {
       const loginScreen = document.getElementById('login-screen');
       const appWrapper = document.getElementById('app-wrapper');
+      const emailInput = document.getElementById('email-input');
       const passwordInput = document.getElementById('password-input');
       const loginButton = document.getElementById('login-button');
       const errorMessage = document.getElementById('error-message');
-      const correctPassword = APP_CONFIG.password;
 
-      function attemptLogin() {
-        if (passwordInput.value === correctPassword) {
-          loginScreen.style.display = 'none';
-          appWrapper.style.display = 'block';
-        } else {
-          errorMessage.textContent = 'Mật khẩu không đúng!';
-          passwordInput.value = '';
-          passwordInput.focus();
+      async function attemptLogin() {
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        errorMessage.textContent = '';
+        loginButton.disabled = true;
+
+        try {
+          const userCredential = await auth.signInWithEmailAndPassword(email, password);
+          const user = userCredential.user;
+
+          // KIỂM TRA QUYỀN ADMIN SAU KHI ĐĂNG NHẬP
+          const adminDoc = await db.collection('admins').doc(user.uid).get();
+          if (adminDoc.exists) {
+            // Nếu là admin, hiển thị nút xem log
+            document.getElementById('view-log-btn').style.display = 'block';
+          }
+
+          loginScreen.style.display = 'none'; // Ẩn màn hình đăng nhập
+          appWrapper.style.display = 'block'; // Hiển thị ứng dụng
+        } catch (error) {
+          errorMessage.textContent = 'Email hoặc mật khẩu không đúng!';
         }
+        loginButton.disabled = false;
       }
 
       loginButton.addEventListener('click', attemptLogin);
@@ -150,7 +165,7 @@
         }
       });
 
-      passwordInput.focus();
+      emailInput.focus();
     });
   </script>
 </body>
