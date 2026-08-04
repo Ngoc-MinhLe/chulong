@@ -59,7 +59,9 @@
         <label>1. Chọn Mẫu Con Dấu (Template):</label>
         <select id="templateSelect" onchange="applyWatermark()">
           <option value="template1">Mẫu 1: Badge Giờ Cam/Trắng (Cơ bản)</option>
-          <option value="template2" selected>Mẫu 2: Giờ Khổ Lớn + Vạch Đứng (Tối giản)</option>
+          <option value="template2">Mẫu 2: Giờ Khổ Lớn + Vạch Đứng (Tối giản)</option>
+          <option value="template3">Mẫu 3: Timemark Cam & Vị Trí (Ảnh 1)</option>
+          <option value="template4" selected>Mẫu 4: Nhật Ký Công Việc (Ảnh 2)</option>
         </select>
       </div>
       <div class="form-group">
@@ -67,8 +69,8 @@
         <input type="file" id="mediaInput" accept="image/*,video/*">
       </div>
       <div class="form-group">
-        <label>3. Tên đơn vị / Nhãn:</label>
-        <input type="text" id="labelInput" value="">
+        <label>3. Tên đơn vị / Tiêu đề nhật ký:</label>
+        <input type="text" id="labelInput" value="Nhật ký công việc" onchange="applyWatermark()">
       </div>
       <div class="form-group">
         <label>4. Giờ (HH:MM):</label>
@@ -81,13 +83,33 @@
       <div class="form-group">
         <label>6. Tọa độ GPS (Nếu có):</label>
         <div class="input-group">
-          <input type="text" id="gpsInput" value="">
+          <input type="text" id="gpsInput" value="12.642598°N, 109.403144°E" onchange="applyWatermark()">
           <button class="btn-sub" onclick="getCurrentGPS()">📍 GPS thực</button>
         </div>
       </div>
       <div class="form-group">
-        <label>7. Địa chỉ:</label>
-        <input type="text" id="addressInput" value="">
+        <label>7a. Địa chỉ / Vị trí:</label>
+        <input type="text" id="addressInput" value="Vịnh Vân Phong" onchange="applyWatermark()">
+      </div>
+      <div class="form-group">
+        <label>7b. Quốc gia / Khu vực (Cho Mẫu 3):</label>
+        <input type="text" id="countryInput" value="Việt Nam" onchange="applyWatermark()">
+      </div>
+      <div class="form-group">
+        <label>7c. Thời tiết & Nhiệt độ (Cho Mẫu 3, 4):</label>
+        <div class="input-group">
+          <select id="weatherIconSelect" onchange="applyWatermark()" style="width: 110px;">
+            <option value="cloud">☁️ Mây</option>
+            <option value="sun">☀️ Nắng</option>
+            <option value="sun_cloud">⛅ Nắng mây</option>
+            <option value="rain">🌧️ Mưa</option>
+          </select>
+          <input type="text" id="weatherInput" value="30°C" onchange="applyWatermark()">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>7d. Hướng la bàn (Cho Mẫu 3):</label>
+        <input type="text" id="compassInput" value="317° NW" onchange="applyWatermark()">
       </div>
       <div class="form-group">
         <label>8. Mã Verify:</label>
@@ -115,8 +137,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
 
-  <!-- App Config (đã bị xóa) -->
-
   <!-- Firebase Init & Logging Logic -->
   <script src="firebase-init.js"></script>
 
@@ -143,15 +163,13 @@
           const userCredential = await auth.signInWithEmailAndPassword(email, password);
           const user = userCredential.user;
 
-          // KIỂM TRA QUYỀN ADMIN SAU KHI ĐĂNG NHẬP
           const adminDoc = await db.collection('admins').doc(user.uid).get();
           if (adminDoc.exists) {
-            // Nếu là admin, hiển thị nút xem log
             document.getElementById('view-log-btn').style.display = 'block';
           }
 
-          loginScreen.style.display = 'none'; // Ẩn màn hình đăng nhập
-          appWrapper.style.display = 'block'; // Hiển thị ứng dụng
+          loginScreen.style.display = 'none';
+          appWrapper.style.display = 'block';
         } catch (error) {
           errorMessage.textContent = 'Email hoặc mật khẩu không đúng!';
         }
